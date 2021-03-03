@@ -32,72 +32,73 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   int _user = 3;
-  List<Offset> subCirclesOffsets;
+  List<Offset> _subCirclesOffsets;
   int _nbrIteration = 1;
-  Animation<double> animation;
-  AnimationController controller;
-  Offset endpoint;
-  Offset currentLine;
+  Animation<double> _animation;
+  AnimationController _controller;
+  Offset _endpoint;
+  Offset _currentLine;
 
   @override
   void initState() {
     super.initState();
 
-    subCirclesOffsets = _getSubCirclesOffsets();
-    endpoint = subCirclesOffsets[Random().nextInt(subCirclesOffsets.length -1)];
+    _subCirclesOffsets = _getSubCirclesOffsets();
+    updateEndPoint();
 
 
 
-    controller = AnimationController(
+    _controller = AnimationController(
       vsync: this,
       duration: Duration(seconds: 3),
     );
 
     Tween<double> _rotationTween = Tween(begin: -pi, end: pi);
 
-    animation = _rotationTween.animate(controller)
+    _animation = _rotationTween.animate(_controller)
       ..addListener(() {
         setState(() {});
-        if ((currentLine - endpoint).distance < 5) {
+        if ((_currentLine - _endpoint).distance < 5) {
           //target touched
           if (_nbrIteration > 0) {
             _nbrIteration--;
           } else {
-            controller.stop();
+            _controller.stop();
             _nbrIteration = 1;
+            updateEndPoint();
           }
         }
 
       })
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
-          print("upperBound : " + controller.upperBound.toString() + " lowerBound : " + controller.lowerBound.toString());
-          controller.repeat();
+          print("upperBound : " + _controller.upperBound.toString() + " lowerBound : " + _controller.lowerBound.toString());
+          _controller.repeat();
         } else if (status == AnimationStatus.dismissed) {
-          controller.forward();
+          _controller.forward();
         }
       });
   }
 
   List<Offset> _getSubCirclesOffsets() {
-    List<Offset> angles = [];
+    List<Offset> offsets = [];
     for (int i = 0; i < _user; i++) {
       final angle = ((2 * i) * pi) / _user;
       print("angle : " + angle.toString());
       final x = MyApp.baseCircleRadius * cos(angle);
       final y = MyApp.baseCircleRadius * sin(angle);
-      angles.add(Offset(x, y));
+      offsets.add(Offset(x, y));
     }
 
-    return angles;
+    return offsets;
   }
 
   void _incrementUser() {
     if (_user < 8) {
       setState(() {
         _user++;
-        subCirclesOffsets = _getSubCirclesOffsets();
-        endpoint = subCirclesOffsets[Random().nextInt(subCirclesOffsets.length -1)];
+        _subCirclesOffsets = _getSubCirclesOffsets();
+        updateEndPoint();
       });
     }
   }
@@ -106,23 +107,31 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     if (_user > 0) {
       setState(() {
         _user--;
-        subCirclesOffsets = _getSubCirclesOffsets();
-        endpoint = subCirclesOffsets[Random().nextInt(subCirclesOffsets.length -1)];
+        _subCirclesOffsets = _getSubCirclesOffsets();
+        updateEndPoint();
       });
     }
   }
 
   void _startSelection() {
-    if (controller != null && !controller.isAnimating) {
-      controller.forward();
-    } else if (controller != null) {
-      controller.stop();
+    if (_controller != null && !_controller.isAnimating) {
+      _controller.forward();
+    } else if (_controller != null) {
+      _controller.stop();
     }
     setState(() {});
   }
 
   void updateCurrentLine(Offset newOffset) {
-    currentLine = newOffset;
+    _currentLine = newOffset;
+  }
+  
+  void updateEndPoint() {
+    if (_subCirclesOffsets != null) {
+      _endpoint = _subCirclesOffsets[Random().nextInt(_subCirclesOffsets.length -1)];
+    } else {
+      throw Exception("Trying to get endpoint on a null offsets array");
+    }
   }
 
   @override
@@ -133,8 +142,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       ),
       body: Center(
         child: CustomPaint(
-          painter: CirclesPainter(nbrPoint: _user, subCirclesOffsets: this.subCirclesOffsets),
-          foregroundPainter: CursorPainter(radians: animation.value, parent: this),
+          painter: CirclesPainter(nbrPoint: _user, subCirclesOffsets: this._subCirclesOffsets),
+          foregroundPainter: CursorPainter(radians: _animation.value, parent: this),
         ),
       ),
       floatingActionButton: Row(
@@ -143,7 +152,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         FloatingActionButton(
           onPressed: _startSelection,
           tooltip: 'Toggle Animation',
-          child: controller.isAnimating ? Icon(Icons.pause) : Icon(Icons.play_arrow),
+          child: _controller.isAnimating ? Icon(Icons.pause) : Icon(Icons.play_arrow),
         ),
         FloatingActionButton(
           onPressed: _incrementUser,
